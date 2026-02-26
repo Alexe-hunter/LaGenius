@@ -71,7 +71,15 @@
         </article>
 
     </div>
+    
+    <!-- Bouton de test pour créer une séquence sauvegardée -->
+    <div style="margin: 20px 0; text-align: center;">
+        <button onclick="creerSequenceTest()" style="background: var(--primary-neon); color: var(--bg-color); border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer;">
+            Créer une séquence de test
+        </button>
+    </div>
 </main>
 
+<script src="assets/script/local.js"></script>
 <?php include 'includes/block.php'; ?>
 <?php include 'includes/footer.php'; ?>

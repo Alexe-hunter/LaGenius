@@ -1,3 +1,5 @@
+// dna_logic.js
+
 // Constantes pour les bases valides
 const VALID_BASES = ['A', 'T', 'G', 'C'];
 

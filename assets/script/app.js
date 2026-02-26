@@ -128,16 +128,41 @@ function chargerSequence() {
 // --- FONCTIONS DE LA BIBLIOTHÈQUE ---
 
 function initLibrary() {
-    // 1. Recherche dynamique
+    // 1. Recherche dynamique améliorée
     const searchInput = document.getElementById('library-search');
     if (searchInput) {
         searchInput.addEventListener('input', (e) => {
             const term = e.target.value.toLowerCase();
             const cards = document.querySelectorAll('.genome-card');
+            const separator = document.querySelector('.library-separator');
+            let hasVisibleSavedSequences = false;
+            let hasVisibleOriginalSequences = false;
+            
             cards.forEach(card => {
                 const text = card.innerText.toLowerCase();
-                card.style.display = text.includes(term) ? 'flex' : 'none';
+                const isVisible = text.includes(term);
+                card.style.display = isVisible ? 'flex' : 'none';
+                
+                // Vérifier quelles séquences sont visibles
+                if (isVisible) {
+                    if (card.classList.contains('saved-sequence')) {
+                        hasVisibleSavedSequences = true;
+                    } else {
+                        hasVisibleOriginalSequences = true;
+                    }
+                }
             });
+            
+            // Gérer l'affichage du séparateur
+            if (separator) {
+                const savedSequences = getSauvegardes();
+                if (savedSequences.length > 0) {
+                    // Afficher le séparateur seulement s'il y a des séquences sauvegardées et qu'elles sont visibles
+                    separator.style.display = (hasVisibleSavedSequences || term === '') ? 'block' : 'none';
+                } else {
+                    separator.style.display = 'none';
+                }
+            }
         });
     }
 
@@ -175,6 +200,9 @@ function initLibrary() {
             localStorage.setItem('labgenius-favorites', JSON.stringify(favorites));
         });
     });
+
+    // 4. Afficher les séquences sauvegardées
+    afficherSequencesSauvegardees();
 }
 
 // --- FONCTIONS ACTIONS GÉNÉRALES ---
@@ -261,6 +289,69 @@ function ajouterMutationHistorique(pos, oldB, newB) {
     document.getElementById('mutation-history').style.display = 'block';
 }
 
+// --- SYSTÈME DE SAUVEGARDE LOCALSTORAGE ---
+
+function sauvegarderSequence(nom, sequence, type = 'sequenceur') {
+    const sauvegardes = JSON.parse(localStorage.getItem('labgenius-sauvegardes')) || [];
+    
+    // Calculer les méta-données
+    const bases = sequence.toUpperCase().replace(/[^ATGC]/g, '');
+    const gc = bases.filter(b => b === 'G' || b === 'C').length;
+    const gcPct = bases.length ? Math.round(gc / bases.length * 100) : 0;
+    const acidesAmines = traduireEnAcidesAmines(sequence);
+    
+    const nouvelleSauvegarde = {
+        id: Date.now().toString(),
+        nom: nom || `Séquence ${sauvegardes.length + 1}`,
+        sequence: sequence,
+        type: type,
+        date: new Date().toLocaleDateString('fr-FR'),
+        bases: bases.length,
+        gc: gcPct,
+        acidesAmines: acidesAmines,
+        timestamp: Date.now()
+    };
+    
+    sauvegardes.unshift(nouvelleSauvegarde);
+    
+    // Limiter à 20 sauvegardes maximum
+    if (sauvegardes.length > 20) {
+        sauvegardes.splice(20);
+    }
+    
+    localStorage.setItem('labgenius-sauvegardes', JSON.stringify(sauvegardes));
+    showFeedback(`Séquence "${nouvelleSauvegarde.nom}" sauvegardée dans la bibliothèque`, "success");
+    
+    return nouvelleSauvegarde;
+}
+
+function sauvegarderSequenceActuelle() {
+    if (sequenceCourante && sequenceCourante.length > 0) {
+        const nom = prompt("Nommez votre séquence pour la sauvegarder :", `Séquence du ${new Date().toLocaleDateString('fr-FR')}`);
+        if (nom) {
+            sauvegarderSequence(nom, sequenceCourante, 'sequenceur');
+        }
+    } else {
+        showFeedback("Aucune séquence à sauvegarder", "error");
+    }
+}
+
+function getSauvegardes() {
+    return JSON.parse(localStorage.getItem('labgenius-sauvegardes')) || [];
+}
+
+function supprimerSauvegarde(id) {
+    const sauvegardes = getSauvegardes();
+    const sauvegardesFiltrees = sauvegardes.filter(s => s.id !== id);
+    localStorage.setItem('labgenius-sauvegardes', JSON.stringify(sauvegardesFiltrees));
+    showFeedback("Séquence supprimée", "success");
+    
+    // Recharger la page pour mettre à jour l'affichage
+    setTimeout(() => {
+        window.location.reload();
+    }, 1000);
+}
+
 // --- SYSTÈME DE THÈME ET FEEDBACK ---
 
 function initTheme() {
@@ -304,4 +395,107 @@ function showFeedback(message, type = 'success') {
     fb.innerText = message;
     document.body.appendChild(fb);
     setTimeout(() => fb.remove(), 2500);
+}
+
+function afficherSequencesSauvegardees() {
+    const libraryList = document.getElementById('library-list');
+    if (!libraryList) return;
+
+    const sauvegardes = getSauvegardes();
+    
+    if (sauvegardes.length === 0) return;
+
+    // Créer un séparateur
+    const separator = document.createElement('div');
+    separator.className = 'library-separator';
+    separator.innerHTML = `
+        <h3 style="color: var(--primary-neon); margin: 30px 0 15px 0; font-size: 1.1rem;">
+            📁 Mes Séquences Sauvegardées
+        </h3>
+    `;
+    libraryList.appendChild(separator);
+
+    // Ajouter chaque séquence sauvegardée
+    sauvegardes.forEach(sauvegarde => {
+        const card = document.createElement('article');
+        card.className = 'genome-card saved-sequence';
+        card.setAttribute('data-id', sauvegarde.id);
+        card.setAttribute('data-type', sauvegarde.type);
+        
+        const typeIcon = sauvegarde.type === 'synthese' ? '⚗️' : '🧬';
+        const typeLabel = sauvegarde.type === 'synthese' ? 'Synthèse' : 'Séquenceur';
+        
+        card.innerHTML = `
+            <div class="card-info">
+                <h3>${typeIcon} ${sauvegarde.nom}</h3>
+                <p>Séquence ${typeLabel.toLowerCase()} avec ${sauvegarde.bases} bases</p>
+                <div class="card-meta">
+                    <span>${sauvegarde.bases} bases</span> • 
+                    <span>GC: ${sauvegarde.gc}%</span> • 
+                    <span>${sauvegarde.date}</span> • 
+                    <span>${typeLabel}</span>
+                </div>
+                ${sauvegarde.acidesAmines ? `<div class="aa-preview" style="margin-top: 8px; color: var(--text-muted); font-size: 0.85rem;">${sauvegarde.acidesAmines}</div>` : ''}
+            </div>
+            <div class="card-actions">
+                <button class="btn btn-secondary btn-sm favorite-btn" title="Ajouter aux favoris">
+                    <i class="fa-solid fa-bookmark"></i>
+                </button>
+                <button class="btn btn-primary btn-sm load-btn" data-seq="${sauvegarde.sequence}" title="Envoyer au séquenceur">
+                    <i class="fa-solid fa-play"></i>charger
+                </button>
+                <button class="btn btn-secondary btn-sm delete-btn" onclick="supprimerSauvegarde('${sauvegarde.id}')" title="Supprimer">
+                    <i class="fa-solid fa-trash"></i>
+                </button>
+            </div>
+        `;
+        
+        libraryList.appendChild(card);
+    });
+
+    // Réinitialiser les écouteurs pour les nouvelles cartes
+    reinitLibraryListeners();
+}
+
+function reinitLibraryListeners() {
+    // Réinitialiser les boutons de chargement
+    const loadButtons = document.querySelectorAll('.saved-sequence .load-btn');
+    loadButtons.forEach(btn => {
+        btn.addEventListener('click', () => {
+            const seq = btn.getAttribute('data-seq');
+            localStorage.setItem('labgenius-transfert', seq);
+            showFeedback("Séquence envoyée à l'éditeur...", "success");
+            setTimeout(() => window.location.href = 'sequenceur.php', 800);
+        });
+    });
+
+    // Réinitialiser les boutons de favoris
+    const favButtons = document.querySelectorAll('.saved-sequence .favorite-btn');
+    let favorites = JSON.parse(localStorage.getItem('labgenius-favorites')) || [];
+
+    favButtons.forEach(btn => {
+        const card = btn.closest('.genome-card');
+        const cardId = card.getAttribute('data-id');
+
+        if (favorites.includes(cardId)) btn.style.color = "var(--primary-neon)";
+
+        btn.addEventListener('click', () => {
+            if (favorites.includes(cardId)) {
+                favorites = favorites.filter(id => id !== cardId);
+                btn.style.color = "";
+            } else {
+                favorites.push(cardId);
+                btn.style.color = "var(--primary-neon)";
+                showFeedback("Ajouté aux favoris", "success");
+            }
+            localStorage.setItem('labgenius-favorites', JSON.stringify(favorites));
+        });
+    });
+
+    // Mettre à jour la recherche pour inclure les nouvelles cartes
+    const searchInput = document.getElementById('library-search');
+    if (searchInput) {
+        // Déclencher un événement de recherche pour appliquer les filtres actuels
+        searchInput.dispatchEvent(new Event('input'));
+    }
 }

@@ -52,6 +52,7 @@
             <button class="btn btn-action" onclick="transcrire()">⧉ Transcription (ADN → ARNm)</button>
             <button class="btn btn-action btn-mutation" onclick="mutationPonctuelle()">⚡ Mutation Ponctuelle</button>
             <button class="btn btn-action" onclick="reinitialiser()">↺ Réinitialiser</button>
+            <button class="btn btn-action btn-save" onclick="sauvegarderSequenceActuelle()">💾 Sauvegarder</button>
         </div>
 
         <!-- Section pour l'affichage de l'ARNm -->

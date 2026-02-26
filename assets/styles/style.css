@@ -718,6 +718,17 @@ footer {
     background: #f59e0b22;
 }
 
+.btn-save {
+    border-color: #22c55e;
+    color: #22c55e;
+}
+
+.btn-save:hover {
+    background: #22c55e22;
+    border-color: #22c55e;
+    color: #22c55e;
+}
+
 /* Styles pour les acides aminés */
 .aa-chip {
     width: 42px;
