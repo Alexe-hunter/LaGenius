@@ -1,4 +1,5 @@
 *===LabGenius de Genomics===*:
+Avec la participation de MPOHO Paulina, TOKOBANZA Exaucé et SINDA Victoire
 
 LabGenius est une plateforme interactive de bio-informatique conçue pour les chercheurs et étudiants. 
 Elle permet de simuler des manipulations génétiques complexes directement depuis un navigateur, avec un retour visuel en temps réel.
